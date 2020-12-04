@@ -1,4 +1,4 @@
-#' thining function
+#' Apply thinning to Markov Chain Monte Carlo simulations.
 #'
 #' @param sris
 #' @param thinby
