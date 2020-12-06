@@ -2,7 +2,7 @@
 % Please edit documentation in R/thining.R
 \name{thining}
 \alias{thining}
-\title{thining function}
+\title{Apply thinning to Markov Chain Monte Carlo simulations.}
 \usage{
 thining(sris, thinby = 1)
 }
@@ -13,5 +13,5 @@ thining(sris, thinby = 1)
 
 }
 \description{
-thining function
+Apply thinning to Markov Chain Monte Carlo simulations.
 }
