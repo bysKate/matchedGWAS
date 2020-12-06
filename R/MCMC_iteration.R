@@ -91,7 +91,7 @@ update_mcmc <- function(itt, initl=NA) {
       return()
     }
     # Gibbs update
-    update_b1()
+    update_b()
     update_gstatus()
     update_H()
 

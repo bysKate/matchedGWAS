@@ -21,7 +21,7 @@ mcmc_posterior <- function(
 
   # source codes
   setwd(curr_dir)
-  source('params_m1.R')
+  source('params.R')
 
 
   # mcmc 1
