@@ -1,16 +1,19 @@
 #' Update allele frequency parameter.
 #'
+#' @description For J SNPs on the segment, iteratively update relative risk parameter (A_1, ..., A_J). The next state is updated based on the most current state of other parameters.
 #' @return
 #' @export
 #'
 #' @examples
 update_al <- function() {
 
-  # by SNP
+  # Update Allele freq for each SNP
   for (idx in 1:snp.nums) {
 
     # Initialize af.mh.chain with length = af.mh.updates + 1
     af.mh.chain <- c(af.current[idx], rep(NA,af.mh.updates))
+    # store acceptance results
+    af.mh.accept <- rep(NA, af.mh.updates)
 
     # parameters
     hh <-  HH[iter+1, idx]
@@ -19,7 +22,7 @@ update_al <- function() {
       ali <-  af.mh.chain[mh.idx]
 
       # propose rate
-      rate.curr <- MAF_shape_1 * (1-ali) / ali - 1/3/ali + 2/3
+      rate.curr <-  MAF_shape_1 * (1-ali) / ali
 
       new.ali <- rbeta(1, MAF_shape_1, rate.curr)
 
@@ -45,7 +48,7 @@ update_al <- function() {
                         dbeta(ali, shape1 = MAF_alpha_0[idx], shape2 = MAF_beta_0[idx]) )
 
       # rate 3 - proposal jump probability
-      rate.new <- MAF_shape_1 * (1-new.ali) / new.ali - 1/3/new.ali + 2/3
+      rate.new <-  MAF_shape_1 * (1-new.ali) / new.ali
 
       rate3 <- dbeta( ali, MAF_shape_1, rate.new) /
         dbeta( new.ali, MAF_shape_1, rate.curr)
@@ -54,13 +57,18 @@ update_al <- function() {
       rate <- rate1 * rate2 * rate3
       accept <- rbinom(1,1,min(1,rate))
 
+      # update next MH state
       af.mh.chain[mh.idx+1] <- new.ali * accept + ali * (1-accept)
+      af.mh.accept[mh.idx] <- accept
 
     }
-    # ts.plot(af.mh.chain)
+
     # update
-    af.current[idx] <<- af.mh.chain[af.mh.updates+1]
+    af.current[idx] <<- mean(tail(af.mh.chain, 10))
     aallele[iter+1, idx] <<- af.current[idx]
+    # average acceptance rate
+    af_accept_rt[iter, idx] <<- mean(af.mh.accept)
+
   }
 
   return()
