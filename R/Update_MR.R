@@ -1,25 +1,32 @@
 #' Update mutation rate parameter.
 #'
+#' @description For J SNPs on the segment, iteratively update relative risk parameter (M_1, ..., M_J). The next state is updated based on the most current state of other parameters.
 #' @return
 #' @export
 #'
 #' @examples
 update_muta <- function() {
 
-  # by SNP
+  # Update RR for each SNP
   for (idx in 1:snp.nums) {
 
+    # Initialize rr.mh.chain with length = (rr.mh.updates+1)
     mh.chain <- c(mr.current[idx], rep(NA,mr.mh.updates))
+    # store acceptance results
+    mr.mh.accept <- rep(NA, mr.mh.updates)
+
     # parameter
     hh <-  HH[iter+1, idx]
 
     for (mh.idx in 1:mr.mh.updates ) {
+
+      # current MH state
       muti <- mh.chain[mh.idx]
 
       # propose new value
-      # shape.curr <- ( mr_s1 *muti+ 1) / (1-muti)
-      rate.curr_mr <- mr_s1 * (1-muti) / muti - 1/3/muti + 2/3
-      new.muti <- rbeta(1, mr_s1, rate.curr_mr)
+      shape.curr <- ( mr_s1 *muti+ 1) / (1-muti)
+      # rate.curr_mr <- mr_s1
+      new.muti <- rbeta(1, shape.curr, mr_s1)
 
       # rate 1
       tmp1 <- multinom_ratio( gam = ri.current[idx],
@@ -44,20 +51,26 @@ update_muta <- function() {
 
 
       # rate 3 - proposal jump probability
-      rate.new_mr <- mr_s1 * (1-new.muti) / new.muti - 1/3/new.muti + 2/3
+      shape.new_mr <- ( mr_s1 *new.muti+ 1) / (1-new.muti)
 
-      rate3 <- dbeta(muti, mr_s1, rate.new_mr) /
-        dbeta(new.muti, mr_s1, rate.curr_mr)
+      rate3 <- dbeta(muti, shape.new_mr, mr_s1) /
+        dbeta(new.muti, shape.curr, mr_s1)
 
       rate <- rate1 * rate2 * rate3
       accept <- rbinom(1,1,min(1,rate))
 
+      # update next MH state
       mh.chain[mh.idx+1] <- new.muti*accept + muti*(1-accept)
+      mr.mh.accept[mh.idx] <- accept
+
     }
-    # ts.plot(mh.chain)
-    # update
-    mr.current[idx] <<- mh.chain[mr.mh.updates + 1]
+
+    # update next Gibbs
+    mr.current[idx] <<- mean(tail(mh.chain, 5))
     mmutate[iter+1, idx] <<- mr.current[idx]
+    # average acceptance rate
+    mr_accept_rt[iter, idx] <<- mean(mr.mh.accept)
+
   }
 
   return()
