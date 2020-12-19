@@ -7,17 +7,20 @@
 #' @examples
 update_risk <- function() {
 
-  # by SNP
+  # Update RR for each SNP
   for (idx in 1:snp.nums) {
 
     # Initialize rr.mh.chain with length = (rr.mh.updates+1)
     rr.mh.chain <- c(ri.current[idx], rep(NA,rr.mh.updates))
+    # store acceptance results
+    rr.mh.accept <- rep(NA, rr.mh.updates)
 
     # parameters
     hh <- HH[iter+1, idx]
 
     for (mh.idx in 1:rr.mh.updates ) {
 
+      # current MH state
       ri <-  rr.mh.chain[mh.idx]
       # propose
       shape.curr <- 1 + shape.coef * ri
@@ -51,15 +54,17 @@ update_risk <- function() {
       rate <- rate1 * rate2 * rate3
       accept <- rbinom(1, 1, min(1, rate))
 
-      # update
+      # update next MH state
       rr.mh.chain[mh.idx+1] <- new.ri * accept + ri * (1-accept)
+      rr.mh.accept[mh.idx] <- accept
 
-      # rr.mh.accep_rate <- c(rr.mh.accep_rate, accept)
     }
 
     # update
-    ri.current[idx] <<- rr.mh.chain[rr.mh.updates+1]
+    ri.current[idx] <<- mean(tail(rr.mh.chain, 10))
     rrisk[iter+1, idx] <<- ri.current[idx]
+    # average acceptance rate
+    rr_accept_rt[iter, idx] <<- mean(rr.mh.accept)
   }
 
   return()
