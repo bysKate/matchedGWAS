@@ -1,7 +1,7 @@
 #' MCMC iteration.
 #'
+#' @param use_seed specify seed for initialization
 #' @param itt iteration numbers
-#' @param initl initialization number
 #'
 #' @return esti.list:  a list of estimation objects
 #' @export
@@ -12,11 +12,9 @@
 #' iter: current status (Gibbs sampler)
 #'
 #' @examples
-update_mcmc <- function(itt, initl=NA) {
+update_mcmc <- function(itt, use_seed = 1) {
 
-  assign('sim.steps',
-         itt,
-         envir = .GlobalEnv)
+
   assign('snp.nums',
          dim(ssample)[1],
          envir = .GlobalEnv)
@@ -31,72 +29,70 @@ update_mcmc <- function(itt, initl=NA) {
          matrix(ncol = snp.nums, nrow = itt),
          envir = .GlobalEnv)
 
+  sapply(c('rr_accept_rt', 'af_accept_rt', 'mr_accept_rt'),
+         assign,
+         matrix(ncol = snp.nums, nrow = itt-1),
+         envir = .GlobalEnv
+  )
+
 
   # initialisation
-  if (initl==1) {
-    set.seed(1)
+  set.seed(use_seed)
 
-    bb[1] <<- 0.3
+  if (use_seed==1) {
+
+    # no risk
+    bb[1] <<- 0.2
     ggstatus[1] <<- 0
     HH[1,] <<- 0
-
     rrisk[1,] <<- 1
     aallele[1,] <<- data.maf
     mmutate[1,] <<- 0.005
 
-  } else if (initl==2){
-    set.seed(2)
+  } else if (use_seed==2){
 
+    # moderate risk
     bb[1] <<- 0.5
-    ggstatus[1] <<- 1
+    ggstatus[1] <<- 0
     HH[1,] <<- 1
-
-    rrisk[1,] <<- 3         # large risk
+    rrisk[1,] <<- 2
     aallele[1,] <<- af1.center
     mmutate[1,] <<- 0.005
 
   } else {
-    set.seed(3)
 
-    bb[1] <<- 0.3
-    ggstatus[1] <<- 0
+    # large risk
+    bb[1] <<- 0.7
+    ggstatus[1] <<- 1
     HH[1,] <<- 1
-
-    rrisk[1,] <<- 1.8       # moderate risk
-    aallele[1,] <<- (af1.center+data.maf)/2
+    rrisk[1,] <<- 3
+    aallele[1,] <<- af1.center * 0.5
     mmutate[1,] <<- 0.005
 
   }
 
+  # Update current status
+  assign('bb.current', bb[1] ,      envir = .GlobalEnv)
+  assign('gg.current', ggstatus[1], envir = .GlobalEnv)
+  assign('hh.current', HH[1,],      envir = .GlobalEnv)
+  assign('ri.current', rrisk[1, ],  envir = .GlobalEnv)
+  assign('af.current', aallele[1, ], envir = .GlobalEnv)
+  assign('mr.current', mmutate[1, ], envir = .GlobalEnv)
+
+
   # iterations
-  for ( iter.local in 1:(sim.steps-1) ) {
+  for ( iter.local in 1:(itt-1) ) {
 
-    # assign current value
     assign('iter', iter.local, envir = .GlobalEnv)
-    assign('bb.current', bb[iter.local] , envir = .GlobalEnv)
-    assign('gg.current', ggstatus[iter.local], envir = .GlobalEnv)
-    assign('hh.current', HH[iter.local,], envir = .GlobalEnv)
-    assign('ri.current', rrisk[iter.local, ], envir = .GlobalEnv)
-    assign('af.current', aallele[iter.local, ], envir = .GlobalEnv)
-    assign('mr.current', mmutate[iter.local, ], envir = .GlobalEnv)
 
-    if (is.na(bb.current) & is.na(gg.current)) {
-      esti.list <<- list('bb'=bb,
-                         'ggstatus'=ggstatus,
-                         'HH'=HH,
-                         'rrisk'=rrisk,
-                         'aallele'=aallele,
-                         'mmutate'=mmutate
-      )
-      return()
-    }
     # Gibbs update
-    update_b()
+    update_b1()
     update_gstatus()
     update_H()
 
     # Metropolis-Hasting, randomize update orders
-    ordr=sample(x = 3,size = 3)
+    ordr <- sample(x = 3,size = 3)
+
     for (oo in ordr) {
 
       if (oo==1) {
@@ -108,15 +104,20 @@ update_mcmc <- function(itt, initl=NA) {
       }
 
     }
+
   }
 
   # combine list
-  esti.list <<- list('bb'=bb,
-                     'ggstatus'=ggstatus,
-                     'HH'=HH,
-                     'rrisk'=rrisk,
-                     'aallele'=aallele,
-                     'mmutate'=mmutate
+  esti.list <<- list(
+    'bb' = bb,
+    'ggstatus' = ggstatus,
+    'HH' = HH,
+    'rrisk' = rrisk,
+    'aallele' = aallele,
+    'mmutate' = mmutate,
+    'rr_accept_rt' = rr_accept_rt,
+    'af_accept_rt' = af_accept_rt,
+    'mr_accept_rt' = mr_accept_rt
   )
 
 }
